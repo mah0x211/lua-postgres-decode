@@ -31,96 +31,6 @@
 #include <lauxhlib.h>
 #include <lua_errno.h>
 
-typedef struct {
-    int year; // years
-    int mon;  // months since January [1-12]
-    int day;  // day of the month [1-31]
-    int hour; // hours since midnight [0-24]
-    int min;  // minutes [0-59]
-    int sec;  // seconds [0-59]
-    int usec; // microseconds [0-999999]
-    // timezone
-    int tzhour;     // timezone hours [0-24]
-    int tzmin;      // timezone minutes [0-59]
-    int tzsec;      // timezone seconds [0-59]
-    char tzsign[2]; // timezone sign [+-]
-} datum_timestamp_t;
-
-typedef union {
-    int bv;
-    double fv;
-    intmax_t iv;
-    uintmax_t uv;
-    datum_timestamp_t tv;
-    double point[2];
-    double line[3];
-    double lseg[2][2];
-    double box[4];
-    double circle[3];
-} datum_t;
-
-int decode_bit_lua(lua_State *L);
-int decode_bit(lua_State *L, const char *op, const char *str, size_t len);
-
-int decode_bytea_lua(lua_State *L);
-int decode_bytea(lua_State *L, const char *op, const char *str, size_t len,
-                 int is_escape);
-
-int decode_bool_lua(lua_State *L);
-int decode_bool(datum_t *v, lua_State *L, const char *op, const char *str,
-                size_t len);
-
-int decode_float_lua(lua_State *L);
-int decode_float(datum_t *v, lua_State *L, const char *op, const char *str,
-                 size_t len);
-
-int decode_int_lua(lua_State *L);
-int decode_int(datum_t *v, lua_State *L, const char *op, const char *str,
-               size_t len);
-
-int decode_date_lua(lua_State *L);
-int decode_date(datum_t *v, lua_State *L, const char *op, const char *str,
-                size_t len, int is_dmy);
-
-int decode_time_lua(lua_State *L);
-int decode_timetz_lua(lua_State *L);
-int decode_time(datum_t *v, lua_State *L, const char *op, const char *str,
-                size_t len, int with_tz);
-
-int decode_point_lua(lua_State *L);
-int decode_point(datum_t *v, lua_State *L, const char *op, const char *str,
-                 size_t len);
-
-int decode_line_lua(lua_State *L);
-int decode_line(datum_t *v, lua_State *L, const char *op, const char *str,
-                size_t len);
-
-int decode_lseg_lua(lua_State *L);
-int decode_lseg(datum_t *v, lua_State *L, const char *op, const char *str,
-                size_t len);
-
-int decode_box_lua(lua_State *L);
-int decode_box(datum_t *v, lua_State *L, const char *op, const char *str,
-               size_t len);
-
-int decode_path_lua(lua_State *L);
-int decode_path(datum_t *v, lua_State *L, const char *op, const char *str,
-                size_t len);
-
-int decode_polygon_lua(lua_State *L);
-int decode_polygon(datum_t *v, lua_State *L, const char *op, const char *str,
-                   size_t len);
-
-int decode_circle_lua(lua_State *L);
-int decode_circle(datum_t *v, lua_State *L, const char *op, const char *str,
-                  size_t len);
-
-int decode_array_lua(lua_State *L);
-typedef int (*decode_array_cb)(void *ctx, lua_State *L, const char *op,
-                               const char *str, size_t len);
-int decode_array(lua_State *L, const char *op, const char *str,
-                 decode_array_cb cbfn, void *ctx);
-
 static inline int decode_error(lua_State *L, const char *op, int err,
                                const char *fmt, ...)
 {
@@ -276,11 +186,30 @@ static inline char *decode_skip_delim(char *s, char delim, char open_delim,
 }
 
 #define DECODE_TAIL_SET(str, len)                                              \
- char *str_  = (char *)(str);                                                  \
- size_t len_ = (len);                                                          \
- char tailc_ = str_[len_];                                                     \
- str_[len_]  = 0
+    char *str_  = (char *)(str);                                               \
+    size_t len_ = (len);                                                       \
+    char tailc_ = str_[len_];                                                  \
+    str_[len_]  = 0
 
 #define DECODE_TAIL_UNSET() str_[len_] = tailc_
+
+#define DECODE_START(L, op, str, len)                                          \
+    do {                                                                       \
+        if (!(len)) {                                                          \
+            return decode_error((L), (op), EINVAL, "empty string");            \
+        }                                                                      \
+        lua_State *L_ = (L);                                                   \
+        char *op_     = (char *)(op);                                          \
+        char *head_   = (char *)(str);                                         \
+    DECODE_TAIL_SET((str), (len))
+
+#define DECODE_END(ptr)                                                        \
+    if (*(ptr)) {                                                              \
+        DECODE_TAIL_UNSET();                                                   \
+        return decode_error_at(L_, op_, EILSEQ, head_, (ptr));                 \
+    }                                                                          \
+    DECODE_TAIL_UNSET();                                                       \
+    }                                                                          \
+    while (0)
 
 #endif

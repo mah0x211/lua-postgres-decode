@@ -20,58 +20,41 @@
  *  DEALINGS IN THE SOFTWARE.
  */
 
-#include "lua_postgres_decode.h"
+#include "lua_postgres_decode_geom.h"
 
-int decode_float(datum_t *v, lua_State *L, const char *op, const char *str,
-                 size_t len)
+// 8.8.3. Line Segments
+// https://www.postgresql.org/docs/current/datatype-geometric.html#DATATYPE-LSEG
+
+static int decode_lseg_lua(lua_State *L)
 {
-    char *s      = (char *)str;
-    char *endptr = s;
+    static const char *op = "postgres.decode.lseg";
+    size_t len            = 0;
+    char *str             = (char *)lauxh_checklstring(L, 1, &len);
+    double x[2]           = {0};
+    double y[2]           = {0};
 
-    if (!len) {
-        return decode_error(L, op, EINVAL, "empty string");
+    // line-segment: [(x1, y1), (x2, y2)]
+    lua_settop(L, 1);
+    DECODE_START(L, op, str, len);
+    GEOM_SKIP_DELIM(str, '[', "opening square bracket not found");
+    GEOM_STR2POINT(str, x[0], y[0]);
+    GEOM_SKIP_DELIM(str, ',', "separator not found");
+    GEOM_STR2POINT(str, x[1], y[1]);
+    GEOM_SKIP_DELIM(str, ']', "closing square bracket not found");
+    DECODE_END(str);
+
+    lua_createtable(L, 2, 0);
+    for (int i = 0; i < 2; i++) {
+        lua_createtable(L, 2, 0);
+        lauxh_pushnum2arr(L, 1, x[i]);
+        lauxh_pushnum2arr(L, 2, y[i]);
+        lua_rawseti(L, -2, i + 1);
     }
-    DECODE_TAIL_SET(str, len);
-
-    switch (*str) {
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-    case '+':
-    case '-':
-        endptr = NULL;
-        v->fv  = decode_str2dbl(s, &endptr);
-        if (errno) {
-            DECODE_TAIL_UNSET();
-            return decode_error(L, op, errno, NULL);
-        } else if ((size_t)(endptr - s) == len) {
-            DECODE_TAIL_UNSET();
-            return 0;
-        }
-
-    default:
-        DECODE_TAIL_UNSET();
-        return decode_error_at(L, op, EILSEQ, s, endptr);
-    }
+    return 1;
 }
 
-int decode_float_lua(lua_State *L)
+LUALIB_API int luaopen_postgres_decode_lseg(lua_State *L)
 {
-    size_t len      = 0;
-    const char *str = lauxh_checklstring(L, 1, &len);
-    datum_t v       = {0};
-
-    lua_settop(L, 1);
-    if (decode_float(&v, L, "postgres.decode.float", str, len)) {
-        return 2;
-    }
-    lua_pushnumber(L, v.fv);
+    lua_pushcfunction(L, decode_lseg_lua);
     return 1;
 }

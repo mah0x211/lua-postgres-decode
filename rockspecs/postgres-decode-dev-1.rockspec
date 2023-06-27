@@ -5,7 +5,7 @@ source = {
 }
 description = {
     summary = "A set of decoding functions for PostgreSQL output data types.",
-    homepage = "https://github.com/mah0x211/lua-postgres",
+    homepage = "https://github.com/mah0x211/lua-postgres-decode",
     license = "MIT/X11",
     maintainer = "Masatoshi Fukunaga",
 }
@@ -27,7 +27,7 @@ build = {
     },
     install_variables = {
         SRCDIR = "src",
-        INST_LIBDIR = "$(LIBDIR)/postgres/",
+        INST_LIBDIR = "$(LIBDIR)/postgres/decode/",
         LIB_EXTENSION = "$(LIB_EXTENSION)",
     },
 }

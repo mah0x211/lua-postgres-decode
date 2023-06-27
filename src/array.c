@@ -25,14 +25,18 @@
 #define MAX_ARRAY_DEPTH 64
 
 #define SKIP_DELIM_EX(s, delim, open_delim, skip_space, ...)                   \
- do {                                                                          \
-  (s) = decode_skip_delim((s), (delim), (open_delim), skip_space);             \
-  if (!(s)) {                                                                  \
-   return decode_error((L), (op), EILSEQ, __VA_ARGS__);                        \
-  }                                                                            \
- } while (0)
+    do {                                                                       \
+        (s) = decode_skip_delim((s), (delim), (open_delim), skip_space);       \
+        if (!(s)) {                                                            \
+            return decode_error((L), (op), EILSEQ, __VA_ARGS__);               \
+        }                                                                      \
+    } while (0)
 
 #define SKIP_DELIM(s, delim, ...) SKIP_DELIM_EX(s, delim, 0, 1, __VA_ARGS__)
+
+// int decode_array_lua(lua_State *L);
+typedef int (*decode_array_cb)(void *ctx, lua_State *L, const char *op,
+                               const char *str, size_t len);
 
 int decode_array(lua_State *L, const char *op, const char *str,
                  decode_array_cb cbfn, void *ctx)
@@ -181,7 +185,7 @@ static int decode_array_item(void *ctx, lua_State *L, const char *op,
     return lua_gettop(L) - top;
 }
 
-int decode_array_lua(lua_State *L)
+static int decode_array_lua(lua_State *L)
 {
     const char *str = lauxh_checkstring(L, 1);
 
@@ -189,4 +193,10 @@ int decode_array_lua(lua_State *L)
     lua_settop(L, 2);
     return decode_array(L, "postgres.decode.array", str, decode_array_item,
                         NULL);
+}
+
+LUALIB_API int luaopen_postgres_decode_array(lua_State *L)
+{
+    lua_pushcfunction(L, decode_array_lua);
+    return 1;
 }

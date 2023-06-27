@@ -20,27 +20,29 @@
  *  DEALINGS IN THE SOFTWARE.
  */
 
-#include "lua_postgres_decode.h"
+#include "lua_postgres_decode_datetime.h"
 
-LUALIB_API int luaopen_postgres_decode(lua_State *L)
+static int decode_time_lua(lua_State *L)
 {
-    lua_errno_loadlib(L);
-    lua_newtable(L);
-    lauxh_pushfn2tbl(L, "bit", decode_bit_lua);
-    lauxh_pushfn2tbl(L, "bytea", decode_bytea_lua);
-    lauxh_pushfn2tbl(L, "bool", decode_bool_lua);
-    lauxh_pushfn2tbl(L, "float", decode_float_lua);
-    lauxh_pushfn2tbl(L, "int", decode_int_lua);
-    lauxh_pushfn2tbl(L, "date", decode_date_lua);
-    lauxh_pushfn2tbl(L, "time", decode_time_lua);
-    lauxh_pushfn2tbl(L, "timetz", decode_timetz_lua);
-    lauxh_pushfn2tbl(L, "point", decode_point_lua);
-    lauxh_pushfn2tbl(L, "line", decode_line_lua);
-    lauxh_pushfn2tbl(L, "lseg", decode_lseg_lua);
-    lauxh_pushfn2tbl(L, "box", decode_box_lua);
-    lauxh_pushfn2tbl(L, "path", decode_path_lua);
-    lauxh_pushfn2tbl(L, "polygon", decode_polygon_lua);
-    lauxh_pushfn2tbl(L, "circle", decode_circle_lua);
-    lauxh_pushfn2tbl(L, "array", decode_array_lua);
+    size_t len           = 0;
+    const char *str      = lauxh_checklstring(L, 1, &len);
+    datum_timestamp_t ts = {0};
+
+    lua_settop(L, 1);
+    if (decode_time(&ts, L, "postgres.decode.time", str, len, 0)) {
+        return 2;
+    }
+
+    lua_createtable(L, 0, 4);
+    lauxh_pushint2tbl(L, "hour", ts.hour);
+    lauxh_pushint2tbl(L, "min", ts.min);
+    lauxh_pushint2tbl(L, "sec", ts.sec);
+    lauxh_pushint2tbl(L, "usec", ts.usec);
+    return 1;
+}
+
+LUALIB_API int luaopen_postgres_decode_time(lua_State *L)
+{
+    lua_pushcfunction(L, decode_time_lua);
     return 1;
 }
