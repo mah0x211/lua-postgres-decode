@@ -1,9 +1,9 @@
 local testcase = require('testcase')
-local decode = require('postgres.decode')
+local decode_circle = require('postgres.decode.circle')
 
 function testcase.circle()
-    -- test that decode polygon
-    local v = assert(decode.circle('<(10.5,5.5), 15.5 >  '))
+    -- test that decode circle
+    local v = assert(decode_circle('<(10.5,5.5), 15.5 >  '))
     assert.equal(v, {
         10.5,
         5.5,

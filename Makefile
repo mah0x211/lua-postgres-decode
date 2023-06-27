@@ -1,6 +1,6 @@
-TARGET=decode.$(LIB_EXTENSION)
-SRCS=$(wildcard $(SRCDIR)/*.c)
+SRCS=$(shell find src -name '*.c')
 OBJS=$(SRCS:.c=.o)
+SOBJ=$(OBJS:.o=.$(LIB_EXTENSION))
 GCDAS=$(OBJS:.o=.gcda)
 INSTALL?=install
 
@@ -10,15 +10,15 @@ endif
 
 .PHONY: all install
 
-all: $(TARGET)
+all: $(SOBJ)
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(WARNINGS) $(COVFLAGS) $(CPPFLAGS) -o $@ -c $<
 
-$(TARGET): $(OBJS)
+%.$(LIB_EXTENSION): %.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS) $(PLATFORM_LDFLAGS) $(COVFLAGS)
 
 install:
 	$(INSTALL) -d $(INST_LIBDIR)
-	$(INSTALL) $(TARGET) $(INST_LIBDIR)
-	rm -f $(OBJS) $(TARGET) $(GCDAS)
+	$(INSTALL) $(SOBJ) $(INST_LIBDIR)
+	rm -f $(OBJS) $(SOBJ) $(GCDAS)

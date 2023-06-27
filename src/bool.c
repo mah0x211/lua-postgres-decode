@@ -22,44 +22,39 @@
 
 #include "lua_postgres_decode.h"
 
-// 8.4. Binary Data Types
-// https://www.postgresql.org/docs/current/datatype-binary.html
+// 8.6. Boolean Type
+// https://www.postgresql.org/docs/current/datatype-boolean.html
 
-int decode_bytea(lua_State *L, const char *op, const char *str, size_t len,
-                 int is_escape)
+static int decode_bool_lua(lua_State *L)
 {
-    size_t i = 0;
-
-    if (is_escape) {
-        return 0;
-    }
-
-    // hex format
-    if (!len) {
-        return decode_error(L, op, EINVAL, "empty string");
-    } else if (str[0] != '\\') {
-        return decode_error_at(L, op, EILSEQ, str, str);
-    } else if (str[1] != 'x') {
-        return decode_error_at(L, op, EILSEQ, str, str + 1);
-    }
-    for (i = 2; i < len; i++) {
-        if (!isxdigit(str[i])) {
-            return decode_error_at(L, op, EILSEQ, str, str + i);
-        }
-    }
-
-    return 0;
-}
-
-int decode_bytea_lua(lua_State *L)
-{
-    size_t len      = 0;
-    const char *str = lauxh_checklstring(L, 1, &len);
-    int is_escape   = lauxh_optboolean(L, 2, 0);
+    static const char *op = "postgres.decode.bool";
+    size_t len            = 0;
+    const char *str       = lauxh_checklstring(L, 1, &len);
+    int boolv             = 0;
 
     lua_settop(L, 1);
-    if (decode_bytea(L, "postgres.decode.bytea", str, len, is_escape)) {
-        return 2;
+    if (len > 1) {
+        return decode_error_at(L, op, EILSEQ, str, str + 1);
     }
+
+    // boolean: t or f
+    DECODE_START(L, op, str, len);
+    switch (*str) {
+    case 't':
+        boolv = 1;
+    case 'f':
+        break;
+    default:
+        return decode_error_at(L, op, EILSEQ, str, str);
+    }
+    DECODE_END(str + 1);
+
+    lua_pushboolean(L, boolv);
+    return 1;
+}
+
+LUALIB_API int luaopen_postgres_decode_bool(lua_State *L)
+{
+    lua_pushcfunction(L, decode_bool_lua);
     return 1;
 }

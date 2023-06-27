@@ -1,5 +1,5 @@
 local testcase = require('testcase')
-local decode = require('postgres.decode')
+local decode_timetz = require('postgres.decode.timetz')
 
 function testcase.timetz()
     -- test that decode timetz
@@ -44,7 +44,7 @@ function testcase.timetz()
             },
         },
     }) do
-        local t = assert(decode.timetz(v.str))
+        local t = assert(decode_timetz(v.str))
         assert.equal(t, v.cmp)
     end
 end

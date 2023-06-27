@@ -22,33 +22,40 @@
 
 #include "lua_postgres_decode.h"
 
-// 8.10. Bit String Types
-// https : // www.postgresql.org/docs/current/datatype-bit.html
+// 8.4. Binary Data Types
+// https://www.postgresql.org/docs/current/datatype-binary.html
 
-int decode_bit(lua_State *L, const char *op, const char *str, size_t len)
+static int decode_bytea_lua(lua_State *L)
 {
-    const char *s = str;
-
-    if (!len) {
-        return decode_error(L, op, EINVAL, "empty string");
-    }
-
-    for (size_t i = 0; i < len; i++) {
-        if (s[i] != '0' && s[i] != '1') {
-            return decode_error_at(L, op, EILSEQ, str, s + i);
-        }
-    }
-    return 0;
-}
-
-int decode_bit_lua(lua_State *L)
-{
-    size_t len      = 0;
-    const char *str = lauxh_checklstring(L, 1, &len);
+    static const char *op = "postgres.decode.bytea";
+    size_t len            = 0;
+    const char *str       = lauxh_checklstring(L, 1, &len);
+    int is_escape         = lauxh_optboolean(L, 2, 0);
+    size_t i              = 0;
 
     lua_settop(L, 1);
-    if (decode_bit(L, "postgres.decode.bit", str, len)) {
-        return 2;
+    if (is_escape) {
+        return 1;
     }
+
+    // hex format
+    if (!len) {
+        return decode_error(L, op, EINVAL, "empty string");
+    } else if (str[0] != '\\') {
+        return decode_error_at(L, op, EILSEQ, str, str);
+    } else if (str[1] != 'x') {
+        return decode_error_at(L, op, EILSEQ, str, str + 1);
+    }
+    for (i = 2; i < len; i++) {
+        if (!isxdigit(str[i])) {
+            return decode_error_at(L, op, EILSEQ, str, str + i);
+        }
+    }
+    return 1;
+}
+
+LUALIB_API int luaopen_postgres_decode_bytea(lua_State *L)
+{
+    lua_pushcfunction(L, decode_bytea_lua);
     return 1;
 }
