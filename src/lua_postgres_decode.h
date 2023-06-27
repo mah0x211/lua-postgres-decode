@@ -31,7 +31,7 @@
 #include <lauxhlib.h>
 #include <lua_errno.h>
 
-static inline int decode_error(lua_State *L, const char *op, int err,
+static inline int decode_error(lua_State *L, const char *op, int errnum,
                                const char *fmt, ...)
 {
     const char *msg = NULL;
@@ -47,14 +47,14 @@ static inline int decode_error(lua_State *L, const char *op, int err,
 
     lua_settop(L, 0);
     lua_pushnil(L);
-    lua_errno_new_ex(L, LUA_ERRNO_T_DEFAULT, err, op, msg, 0, 0);
+    lua_errno_new_ex(L, LUA_ERRNO_T_DEFAULT, errnum, op, msg, 0, 0);
     return 2;
 }
 
-static inline int decode_error_at(lua_State *L, const char *op, int err,
+static inline int decode_error_at(lua_State *L, const char *op, int errnum,
                                   const char *str, const char *endptr)
 {
-    return decode_error(L, op, err, "'%c' at position %d", *endptr,
+    return decode_error(L, op, errnum, "'%c' at position %d", *endptr,
                         endptr - str + 1);
 }
 
@@ -155,7 +155,7 @@ static inline char *decode_skip_space(char *s)
 }
 
 static inline char *decode_skip_delim(char *s, char delim, char open_delim,
-                                      int skip_space)
+                                      int skip_trailing_spaces)
 {
     int skip = 0;
 
@@ -166,13 +166,14 @@ static inline char *decode_skip_delim(char *s, char delim, char open_delim,
             if (!skip) {
                 s++;
                 // skip trailing whitespaces
-                if (skip_space) {
+                if (skip_trailing_spaces) {
                     return decode_skip_space(s);
                 }
                 return s;
             }
             skip--;
         } else if (*s == open_delim) {
+            // should skip nested delimiters
             skip++;
         } else if (*s == '\\') {
             if (s[1]) {
