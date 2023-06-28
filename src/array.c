@@ -38,7 +38,7 @@
 typedef int (*decode_array_cb)(void *ctx, lua_State *L, const char *op,
                                const char *str, size_t len);
 
-int decode_array(lua_State *L, const char *op, const char *str,
+int decode_array(lua_State *L, const char *op, const char *str, size_t len,
                  decode_array_cb cbfn, void *ctx)
 {
     const int top                   = lua_gettop(L);
@@ -47,6 +47,10 @@ int decode_array(lua_State *L, const char *op, const char *str,
     int arrlen[MAX_ARRAY_DEPTH + 1] = {0};
     const char *token               = NULL;
     int retval                      = 0;
+
+    if (!len) {
+        return decode_error(L, op, EINVAL, "empty string");
+    }
 
     // skip spaces
     SKIP_DELIM(s, '{', "opening curly bracket not found");
@@ -155,7 +159,10 @@ CHECK_ITEM:
     switch (retval) {
     default:
         // function returns multiple values
-        return retval;
+        // remove 3rd and subsequent values
+        lua_pop(L, retval - 2);
+        return decode_error(L, op, EILSEQ, lua_tostring(L, -1));
+
     case 0:
         lua_pushnil(L);
     case 1:
@@ -187,11 +194,12 @@ static int decode_array_item(void *ctx, lua_State *L, const char *op,
 
 static int decode_array_lua(lua_State *L)
 {
-    const char *str = lauxh_checkstring(L, 1);
+    size_t len      = 0;
+    const char *str = lauxh_checklstring(L, 1, &len);
 
     luaL_checktype(L, 2, LUA_TFUNCTION);
     lua_settop(L, 2);
-    return decode_array(L, "postgres.decode.array", str, decode_array_item,
+    return decode_array(L, "postgres.decode.array", str, len, decode_array_item,
                         NULL);
 }
 
