@@ -87,6 +87,22 @@ see also: https://www.postgresql.org/docs/current/datatype-datetime.html#DATATYP
 - `err:any`: error object.
 
 
+## v, err = decode.timestamp( timestampstr )
+
+decode timestamp string with time zone to a table containing year, month, day, hour, minute, second, microsecond, timezone.
+
+see also: https://www.postgresql.org/docs/current/datatype-datetime.html#DATATYPE-DATETIME-OUTPUT
+
+**Parameters**
+
+- `timestampstr:string`: timestamp string representation.
+
+**Returns**
+
+- `v:table`: table containing `year`, `month`, `day`, `hour`, `min`, `sec`, `usec`, `tz`, `tzhour`, `tzmin`, `tzsec`.
+- `err:any`: error object.
+
+
 ## v, err = decode.bool( boolstr )
 
 decode boolean string to boolean value.

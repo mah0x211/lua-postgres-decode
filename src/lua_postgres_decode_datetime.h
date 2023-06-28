@@ -80,7 +80,8 @@ typedef struct {
 } datum_timestamp_t;
 
 static inline int decode_time(datum_timestamp_t *ts, lua_State *L,
-                              const char *op, const char *str, size_t len)
+                              const char *op, const char *str, size_t len,
+                              const char *pos)
 {
     char *s           = (char *)str;
     intmax_t min_max  = 59;
@@ -88,6 +89,9 @@ static inline int decode_time(datum_timestamp_t *ts, lua_State *L,
     intmax_t usec_max = 999999;
 
     DECODE_START(L, op, s, len);
+    if (pos) {
+        s = (char *)pos;
+    }
 
     // decode: hh:mm:ss
     DATETIME_STR2DIGIT(s, ts->hour, 2, 2, 0, 24);
@@ -113,7 +117,7 @@ static inline int decode_time(datum_timestamp_t *ts, lua_State *L,
     // parse timezone: [+-]hh:mm:ss
     // parse sign [+-]
     default:
-        return decode_error(L, op, EILSEQ, "separator not found");
+        return decode_error(L, op, EILSEQ, "timezone symbol not found");
     case '+':
     case '-':
         ts->tzsign[0] = *s;
@@ -198,6 +202,25 @@ static inline int decode_date(datum_timestamp_t *ts, lua_State *L,
 
     DECODE_END(s);
     return 0;
+}
+
+static inline int decode_timestamp(datum_timestamp_t *ts, lua_State *L,
+                                   const char *op, const char *str, size_t len)
+{
+    char *s     = (char *)str;
+    char *dummy = "";
+
+    // decode: yyyy-mm-dd
+    DECODE_START(L, op, s, len);
+    DATETIME_STR2DIGIT(s, ts->year, 4, 4, 0, -1);
+    DATETIME_SKIP_DELIM(s, '-', "separator not found");
+    DATETIME_STR2DIGIT(s, ts->mon, 2, 2, 1, 12);
+    DATETIME_SKIP_DELIM(s, '-', "separator not found");
+    DATETIME_STR2DIGIT(s, ts->day, 2, 2, 1, 31);
+    DECODE_END(dummy);
+
+    s = decode_skip_space(s);
+    return decode_time(ts, L, op, str, len, s);
 }
 
 #undef DATETIME_SKIP_DELIM
