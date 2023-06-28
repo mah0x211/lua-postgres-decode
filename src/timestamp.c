@@ -22,18 +22,21 @@
 
 #include "lua_postgres_decode_datetime.h"
 
-static int decode_time_lua(lua_State *L)
+static int decode_timestamp_lua(lua_State *L)
 {
     size_t len           = 0;
     const char *str      = lauxh_checklstring(L, 1, &len);
     datum_timestamp_t ts = {0};
 
     lua_settop(L, 1);
-    if (decode_time(&ts, L, "postgres.decode.time", str, len, NULL)) {
+    if (decode_timestamp(&ts, L, "postgres.decode.timestamp", str, len)) {
         return 2;
     }
 
     lua_createtable(L, 0, 4);
+    lauxh_pushint2tbl(L, "year", ts.year);
+    lauxh_pushint2tbl(L, "month", ts.mon);
+    lauxh_pushint2tbl(L, "day", ts.day);
     lauxh_pushint2tbl(L, "hour", ts.hour);
     lauxh_pushint2tbl(L, "min", ts.min);
     lauxh_pushint2tbl(L, "sec", ts.sec);
@@ -48,9 +51,9 @@ static int decode_time_lua(lua_State *L)
     return 1;
 }
 
-LUALIB_API int luaopen_postgres_decode_time(lua_State *L)
+LUALIB_API int luaopen_postgres_decode_timestamp(lua_State *L)
 {
     lua_errno_loadlib(L);
-    lua_pushcfunction(L, decode_time_lua);
+    lua_pushcfunction(L, decode_timestamp_lua);
     return 1;
 }
