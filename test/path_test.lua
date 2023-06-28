@@ -3,7 +3,8 @@ local decode_path = require('postgres.decode.path')
 
 function testcase.path()
     -- test that decode path enclosed in round bracket
-    local v = assert(decode_path('((10.5,  5.5), ( 20.5, 15.5  ) )  '))
+    local v, err = decode_path('((10.5,  5.5), ( 20.5, 15.5  ) )  ')
+    assert.is_nil(err)
     assert.equal(v, {
         {
             10.5,
@@ -16,7 +17,8 @@ function testcase.path()
     })
 
     -- test that decode path enclosed in square bracket
-    v = assert(decode_path('[(10.5,  5.5), ( 20.5, 15.5  )  ]'))
+    v, err = decode_path('[(10.5,  5.5), ( 20.5, 15.5  )  ]')
+    assert.is_nil(err)
     assert.equal(v, {
         {
             10.5,
@@ -27,4 +29,9 @@ function testcase.path()
             15.5,
         },
     })
+
+    -- test that opening bracket error
+    v, err = decode_path('{(10.5,  5.5), ( 20.5, 15.5  )  }')
+    assert.is_nil(v)
+    assert.match(err, 'opening square or round bracket')
 end
