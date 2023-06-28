@@ -29,6 +29,14 @@ see also: https://www.postgresql.org/docs/current/datatype-numeric.html#DATATYPE
 - `v:integer`: lua_Integer value.
 - `err:any`: error object.
 
+**Example**
+
+```lua
+local decode_int = require('postgres.decode.int')
+local v = assert(decode_int('9223372036854775807'))
+print(v)
+```
+
 
 ## v, err = decode.float( floatstr )
 
