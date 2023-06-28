@@ -86,6 +86,7 @@ CHECK_NEXT:
 
 LUALIB_API int luaopen_postgres_decode_hstore(lua_State *L)
 {
+    lua_errno_loadlib(L);
     lua_pushcfunction(L, decode_hstore_lua);
     return 1;
 }

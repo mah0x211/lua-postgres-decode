@@ -64,6 +64,7 @@ static int decode_bit_lua(lua_State *L)
 
 LUALIB_API int luaopen_postgres_decode_bit(lua_State *L)
 {
+    lua_errno_loadlib(L);
     lua_pushcfunction(L, decode_bit_lua);
     return 1;
 }

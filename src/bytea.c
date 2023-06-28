@@ -56,6 +56,7 @@ static int decode_bytea_lua(lua_State *L)
 
 LUALIB_API int luaopen_postgres_decode_bytea(lua_State *L)
 {
+    lua_errno_loadlib(L);
     lua_pushcfunction(L, decode_bytea_lua);
     return 1;
 }

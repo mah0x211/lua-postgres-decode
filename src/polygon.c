@@ -57,6 +57,7 @@ CHECK_NEXT:
 
 LUALIB_API int luaopen_postgres_decode_polygon(lua_State *L)
 {
+    lua_errno_loadlib(L);
     lua_pushcfunction(L, decode_polygon_lua);
     return 1;
 }
