@@ -3,9 +3,20 @@ local errno = require('errno')
 local decode_bit = require('postgres.decode.bit')
 
 function testcase.bit()
-    -- test that decode bit value
-    local v, err = assert(decode_bit('0101011100'))
-    assert.equal(v, '0101011100')
+    -- test that decode bit value: 01010111001 -> 0101 0111 001 append [0 0000]
+    local v, err = assert(decode_bit('01010111001'))
+    assert.equal(v, {
+        87,
+        32,
+    })
+    assert.is_nil(err)
+
+    -- test that decode bit value: 0101011100100001 -> 0101 0111 0010 0001
+    v, err = assert(decode_bit('0101011100100001'))
+    assert.equal(v, {
+        87,
+        33,
+    })
     assert.is_nil(err)
 
     -- test that EILSEQ error

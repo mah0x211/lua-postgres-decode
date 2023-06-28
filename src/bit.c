@@ -30,16 +30,33 @@ static int decode_bit_lua(lua_State *L)
     static const char *op = "postgres.decode.bit";
     size_t len            = 0;
     const char *str       = lauxh_checklstring(L, 1, &len);
+    size_t blen           = (len + 7) / 8;
 
     lua_settop(L, 1);
     if (!len) {
         return decode_error(L, op, EINVAL, "empty string");
     }
 
-    for (size_t i = 0; i < len; i++) {
-        if (str[i] != '0' && str[i] != '1') {
-            return decode_error_at(L, op, EILSEQ, str, str + i);
+    lua_createtable(L, blen, 0);
+    for (size_t i = 0; i < blen; i++) {
+        unsigned char c = 0;
+        for (size_t j = 0; j < 8; j++) {
+            // calc next bit index
+            size_t idx = i * 8 + j;
+
+            // reached to the end of string
+            if (idx >= len) {
+                break;
+            }
+
+            if (str[idx] == '1') {
+                c |= 1 << (7 - j);
+            } else if (str[idx] != '0') {
+                return decode_error_at(L, op, EILSEQ, str, str + idx);
+            }
         }
+        lua_pushinteger(L, c);
+        lua_rawseti(L, -2, i + 1);
     }
 
     return 1;
