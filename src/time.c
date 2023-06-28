@@ -29,7 +29,7 @@ static int decode_time_lua(lua_State *L)
     datum_timestamp_t ts = {0};
 
     lua_settop(L, 1);
-    if (decode_time(&ts, L, "postgres.decode.time", str, len, 0)) {
+    if (decode_time(&ts, L, "postgres.decode.time", str, len)) {
         return 2;
     }
 
@@ -38,6 +38,13 @@ static int decode_time_lua(lua_State *L)
     lauxh_pushint2tbl(L, "min", ts.min);
     lauxh_pushint2tbl(L, "sec", ts.sec);
     lauxh_pushint2tbl(L, "usec", ts.usec);
+    if (ts.tzsign[0]) {
+        lauxh_pushstr2tbl(L, "tz", ts.tzsign);
+        lauxh_pushint2tbl(L, "tzhour", ts.tzhour);
+        lauxh_pushint2tbl(L, "tzmin", ts.tzmin);
+        lauxh_pushint2tbl(L, "tzsec", ts.tzsec);
+    }
+
     return 1;
 }
 

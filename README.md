@@ -73,29 +73,13 @@ see also: https://www.postgresql.org/docs/current/datatype-datetime.html#DATATYP
 
 ## v, err = decode.time( timestr )
 
-decode time string without time zone to a table containing hour, minute, second, microsecond.
-
-see also: https://www.postgresql.org/docs/current/datatype-datetime.html#DATATYPE-DATETIME-OUTPUT
-
-**Parameters**
-
-- `timestr:string`: time string representation.
-
-**Returns**
-
-- `v:table`: table containing `hour`, `min`, `sec`, `usec`.
-- `err:any`: error object.
-
-
-## v, err = decode.timetz( timetzstr )
-
 decode time string with time zone to a table containing hour, minute, second, microsecond, timezone.
 
 see also: https://www.postgresql.org/docs/current/datatype-datetime.html#DATATYPE-DATETIME-OUTPUT
 
 **Parameters**
 
-- `timetzstr:string`: time string representation.
+- `timestr:string`: time string representation.
 
 **Returns**
 

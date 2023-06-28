@@ -80,8 +80,7 @@ typedef struct {
 } datum_timestamp_t;
 
 static inline int decode_time(datum_timestamp_t *ts, lua_State *L,
-                              const char *op, const char *str, size_t len,
-                              int with_tz)
+                              const char *op, const char *str, size_t len)
 {
     char *s           = (char *)str;
     intmax_t min_max  = 59;
@@ -107,34 +106,34 @@ static inline int decode_time(datum_timestamp_t *ts, lua_State *L,
         DATETIME_STR2DIGIT(s, ts->usec, 1, 6, 0, usec_max);
     }
 
+    switch (*s) {
+    case 0:
+        goto DONE;
+
     // parse timezone: [+-]hh:mm:ss
-    if (with_tz) {
-        // parse sign [+-]
-        switch (*s) {
-        case '+':
-        case '-':
-            ts->tzsign[0] = *s;
-            s++;
-            break;
+    // parse sign [+-]
+    default:
+        return decode_error(L, op, EILSEQ, "separator not found");
+    case '+':
+    case '-':
+        ts->tzsign[0] = *s;
+        s++;
+    }
 
-        default:
-            DATETIME_SKIP_DELIM(s, '+', "separator not found");
-        }
-
-        // parse: hh | hh:mm | hh:mm:ss
-        DATETIME_STR2DIGIT(s, ts->tzhour, 2, 2, 0, 24);
+    // parse: hh | hh:mm | hh:mm:ss
+    DATETIME_STR2DIGIT(s, ts->tzhour, 2, 2, 0, 24);
+    if (*s == ':') {
+        // parse: hh:mm
+        s++;
+        DATETIME_STR2DIGIT(s, ts->tzmin, 2, 2, 0, 59);
         if (*s == ':') {
-            // parse: hh:mm
+            // parse: hh:mm:ss
             s++;
-            DATETIME_STR2DIGIT(s, ts->tzmin, 2, 2, 0, 59);
-            if (*s == ':') {
-                // parse: hh:mm:ss
-                s++;
-                DATETIME_STR2DIGIT(s, ts->tzsec, 2, 2, 0, 59);
-            }
+            DATETIME_STR2DIGIT(s, ts->tzsec, 2, 2, 0, 59);
         }
     }
 
+DONE:
     DECODE_END(s);
     return 0;
 }
