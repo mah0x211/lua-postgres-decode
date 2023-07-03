@@ -54,6 +54,22 @@ see also: https://www.postgresql.org/docs/current/datatype-numeric.html#DATATYPE
 - `err:any`: error object.
 
 
+## v, err = decode.bytea( byteastr )
+
+check bytea string is valid hex format and returns it.
+
+https://www.postgresql.org/docs/current/datatype-binary.html
+
+**Parameters**
+
+- `byteastr:string`: bytea string representation.
+
+**Returns**
+
+- `v:string`: bytea string.
+- `err:any`: error object.
+
+
 ## v, err = decode.date( datestr [, is_dmy] )
 
 decode date string to a table containing year, month, day.
@@ -280,6 +296,20 @@ see also: https://www.postgresql.org/docs/current/datatype-bit.html
 - `v:integer[]`: array of 8-bit unsigned integers.
 - `err:any`: error object.
 
+**Example**
+
+```lua
+local dump = require('dump')
+local decode_bit = require('postgres.decode.bit')
+local bit = decode_bit('01010111001')
+print(dump(bit))
+-- above code prints:
+-- {
+--     [1] = 87,
+--     [2] = 32
+-- }
+```
+
 
 ## v, err = decode.array( str, fn )
 
@@ -308,3 +338,85 @@ see also: https://www.postgresql.org/docs/current/arrays.html
 - `err:any`: error object.
 
 
+## v, err = decode.hstore( hstorestr )
+
+decode hstore string to table of key-value pairs.
+
+see also: https://www.postgresql.org/docs/current/hstore.html
+
+**Parameters**
+
+- `hstorestr:string`: hstore string representation.
+
+**Returns**
+
+- `v:table`: table of key-value pairs.
+- `err:any`: error object.
+
+**Example**
+
+```lua
+local dump = require('dump')
+local decode_hstore = require('postgres.decode.hstore')
+local hstore = decode_hstore('"a"=>"1","b"=>"2",  "c"=>NULL, "d"=>"NULL"')
+print(dump(hstore))
+-- above code prints:
+-- {
+--     a = "1",
+--     b = "2",
+--     d = "NULL"
+-- }
+```
+
+
+## v, err = decode.tsvector( tsvectorstr )
+
+decode tsvector string to array of lexemes.
+
+see also: https://www.postgresql.org/docs/current/datatype-textsearch.html#DATATYPE-TSVECTOR
+
+**Parameters**
+
+- `tsvectorstr:string`: tsvector string representation.
+
+**Returns**
+
+- `v:table`: array of lexemes.
+- `err:any`: error object.
+
+**Example**
+
+```lua
+local dump = require('dump')
+local decode_tsvector = require('postgres.decode.tsvector')
+local tsv = decode_tsvector("'a':1A 'cat':5 'fat':2,4C")
+print(dump(tsv))
+-- above code prints:
+-- {
+--     [1] = {
+--         lexeme = "a",
+--         positions = {
+--             [1] = 1
+--         },
+--         weights = {
+--             [1] = "A"
+--         }
+--     },
+--     [2] = {
+--         lexeme = "cat",
+--         positions = {
+--             [1] = 5
+--         }
+--     },
+--     [3] = {
+--         lexeme = "fat",
+--         positions = {
+--             [1] = 2,
+--             [2] = 4
+--         },
+--         weights = {
+--             [2] = "C"
+--         }
+--     }
+-- }
+```
