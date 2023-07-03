@@ -420,3 +420,49 @@ print(dump(tsv))
 --     }
 -- }
 ```
+
+
+## v, err = decode.range( rangestr, fn )
+
+decode range string to array of values.
+
+see also: https://www.postgresql.org/docs/current/rangetypes.html
+
+**Parameters**
+
+- `rangestr:string`: range string representation.
+- `fn:function`: function to decode range element.
+    ```lua
+    --- decodefn decode range element string to value. 
+    --- @param elmstr string
+    --- @return v any
+    --- @return err any
+    function decodefn( elmstr )
+        -- if decodefn returns nil, err, stop decoding and return nil and err.
+        return v, 'error from decodefn'
+    end
+    ```
+
+**Returns**
+
+- `v:table`: range values.
+- `err:any`: error object.
+
+**Example**
+
+```lua
+local dump = require('dump')
+local decode_range = require('postgres.decode.range')
+local range = decode_range('[123,456)', function(elmstr)
+    return tonumber(elmstr)
+end)
+print(dump(range))
+-- above code prints:
+-- {
+--     [1] = 123,
+--     [2] = 456,
+--     lower_inc = true
+-- }
+```
+
+
