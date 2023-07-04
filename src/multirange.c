@@ -22,28 +22,67 @@
 
 #include "lua_postgres_decode_range.h"
 
-static int decode_range_lua(lua_State *L)
+static int decode_multirange_lua(lua_State *L)
 {
-    static const char *op = "postgres.decode.range";
+    static const char *op = "postgres.decode.multirange";
     size_t len            = 0;
-    const char *src       = lauxh_checklstring(L, 1, &len);
+    char *src             = (char *)lauxh_checklstring(L, 1, &len);
+    char *str             = src;
+    int nrange            = 0;
 
     luaL_checktype(L, 2, LUA_TFUNCTION);
     lua_settop(L, 2);
+    lua_newtable(L);
 
-    DECODE_START(L, op, src, len);
-    src = decode_range(L, op, (char *)src, NULL);
-    if (!src) {
+    DECODE_START(L, op, str, len);
+    // skip spaces
+    str = decode_skip_space(str);
+    if (!*str) {
+        return decode_error(L, op, EINVAL, "empty string");
+    } else if (*str != '{') {
+        return decode_error_at(L, op, EILSEQ, src, str);
+    }
+    str++;
+
+NEXT_RANGE:
+    str = decode_range(L, op, src, str);
+    if (!str) {
         return 2;
     }
-    DECODE_END(src);
+    lua_rawseti(L, -2, ++nrange);
+
+NEXT_CHAR:
+    // find delimiter or closing parenthesis
+    switch (*str) {
+    case 0:
+        return decode_error(L, op, EILSEQ, "malformed multirange string");
+    default:
+        return decode_error_at(L, op, EILSEQ, src, str);
+
+    case ',':
+        // found delimiter
+        str++;
+        goto NEXT_RANGE;
+
+    case ' ':
+        // skip spaces
+        goto NEXT_CHAR;
+
+    case '}':
+        // found closing parenthesis
+        break;
+    }
+    // call function
+    str = decode_skip_space(str + 1);
+
+    DECODE_END(str);
 
     return 1;
 }
 
-LUALIB_API int luaopen_postgres_decode_range(lua_State *L)
+LUALIB_API int luaopen_postgres_decode_multirange(lua_State *L)
 {
     lua_errno_loadlib(L);
-    lua_pushcfunction(L, decode_range_lua);
+    lua_pushcfunction(L, decode_multirange_lua);
     return 1;
 }

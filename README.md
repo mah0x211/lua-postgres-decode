@@ -466,3 +466,76 @@ print(dump(range))
 ```
 
 
+## v, err = decode.multirange( multirangestr, fn )
+
+decode multirange string to array of range values.
+
+see also: https://www.postgresql.org/docs/current/rangetypes.html
+
+**Parameters**
+
+- `multirangestr:string`: multirange string representation.
+- `fn:function`: function to decode range element.
+    ```lua
+    --- decodefn decode range element string to value. 
+    --- @param elmstr string
+    --- @return v any
+    --- @return err any
+    function decodefn( elmstr )
+        -- if decodefn returns nil, err, stop decoding and return nil and err.
+        return v, 'error from decodefn'
+    end
+    ```
+
+**Returns**
+
+- `v:table`: array of range values.
+- `err:any`: error object.
+
+**Example**
+
+```lua
+local dump = require('dump')
+local decode_multirange = require('postgres.decode.multirange')
+local mrange = decode_multirange(
+                   '{[123,456],(123, 456],[123,456),(123,456),(,),(123,],(,456),[123,)}',
+                   function(elmstr)
+        return tonumber(elmstr)
+    end)
+print(dump(mrange))
+-- above code prints:
+-- {
+--     [1] = {
+--         [1] = 123,
+--         [2] = 456,
+--         lower_inc = true,
+--         upper_inc = true
+--     },
+--     [2] = {
+--         [1] = 123,
+--         [2] = 456,
+--         upper_inc = true
+--     },
+--     [3] = {
+--         [1] = 123,
+--         [2] = 456,
+--         lower_inc = true
+--     },
+--     [4] = {
+--         [1] = 123,
+--         [2] = 456
+--     },
+--     [5] = {},
+--     [6] = {
+--         [1] = 123
+--     },
+--     [7] = {
+--         [2] = 456
+--     },
+--     [8] = {
+--         [1] = 123,
+--         lower_inc = true
+--     }
+-- }
+```
+
