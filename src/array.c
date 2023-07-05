@@ -34,128 +34,126 @@
 
 #define SKIP_DELIM(s, delim, ...) SKIP_DELIM_EX(s, delim, 0, 1, __VA_ARGS__)
 
-// int decode_array_lua(lua_State *L);
-typedef int (*decode_array_cb)(void *ctx, lua_State *L, const char *op,
-                               const char *str, size_t len);
-
-int decode_array(lua_State *L, const char *op, const char *str, size_t len,
-                 decode_array_cb cbfn, void *ctx)
+static int decode_array_item(lua_State *L, const char *token, size_t len)
 {
-    const int top                   = lua_gettop(L);
-    char *s                         = (char *)str;
+    int top = lua_gettop(L);
+    // call function
+    lua_pushvalue(L, 2);
+    lua_pushlstring(L, token, len);
+    lua_call(L, 1, LUA_MULTRET);
+    return lua_gettop(L) - top;
+}
+
+static int decode_array_lua(lua_State *L)
+{
+    static const char *op           = "postgres.decode.array";
+    size_t len                      = 0;
+    char *src                       = (char *)lauxh_checklstring(L, 1, &len);
+    char *str                       = src;
     int depth                       = 0;
     int arrlen[MAX_ARRAY_DEPTH + 1] = {0};
     const char *token               = NULL;
+    size_t token_len                = 0;
     int retval                      = 0;
 
-    if (!len) {
-        return decode_error(L, op, EINVAL, "empty string");
-    }
-
-    // skip spaces
-    SKIP_DELIM(s, '{', "opening curly bracket not found");
-    depth++;
-    arrlen[depth] = 0;
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+    lua_settop(L, 2);
     lua_newtable(L);
 
-CHECK_TOKEN:
-    switch (*s) {
+    // skip spaces
+    str = decode_skip_space(str);
+    if (!*str) {
+        return decode_error(L, op, EINVAL, "empty string");
+    } else if (*str != '{') {
+        return decode_error(L, op, EILSEQ, "opening curly bracket not found");
+    }
+    str = decode_skip_space(str + 1);
+    depth++;
+    arrlen[depth] = 0;
+
+NEXT_ELEMENT:
+    switch (*str) {
     case 0:
         return decode_error(L, op, EILSEQ, "malformed array string");
 
+    case ',':
+        // empty elements are not allowed
+        return decode_error(L, op, EILSEQ, "empty elements are not allowed");
+
     case '{':
+        // found nested array
         depth++;
-        if (depth > MAX_ARRAY_DEPTH) {
+        if (depth > MAX_ARRAY_DEPTH || !lua_checkstack(L, 1)) {
             return decode_error(L, op, EILSEQ, "nesting level %d/%d too deep",
                                 depth, MAX_ARRAY_DEPTH);
         }
         arrlen[depth] = 0;
         lua_newtable(L);
-        s = decode_skip_space(s + 1);
-        goto CHECK_TOKEN;
+        str = decode_skip_space(str + 1);
+        goto NEXT_ELEMENT;
 
     case '}':
-        if (!depth) {
-            return decode_error(L, op, EILSEQ, "'%c' found at position %d", *s,
-                                s - str);
-        }
+        // found end of array
         depth--;
-        s = decode_skip_space(s + 1);
-
+        str = decode_skip_space(str + 1);
         if (depth) {
             // end of nested array
             arrlen[depth]++;
             lua_rawseti(L, -2, arrlen[depth]);
-            if (*s == ',') {
-                s = decode_skip_space(s + 1);
-                goto CHECK_ITEM;
+            if (*str == ',') {
+                // skip comma
+                str = decode_skip_space(str + 1);
             }
-            goto CHECK_TOKEN;
+            goto NEXT_ELEMENT;
         }
-
         // end of array
-        if (*s) {
-            return decode_error(L, op, EILSEQ, "'%c' found at position %d", *s,
-                                s - str);
+        if (*str) {
+            return decode_error_at(L, op, EILSEQ, src, str);
         }
-        lua_settop(L, top + 1);
+        lua_settop(L, 3);
         return 1;
-    }
 
-CHECK_ITEM:
-    switch (*s) {
     case '"':
-        token = s;
-        s++;
-        SKIP_DELIM_EX(s, '"', 0, 0,
-                      "closing quotation not found after position %d",
-                      token - str);
-        break;
-
-    case '(':
-        token = s;
-        s++;
-        SKIP_DELIM_EX(s, ')', '(', 0,
-                      "closing round bracket not found after position %d",
-                      token - str);
-        break;
-
-    case '[':
-        token = s;
-        s++;
-        SKIP_DELIM_EX(s, ']', '[', 0,
-                      "closing square bracket not found after position %d",
-                      s - str);
-        break;
-
-    case '<':
-        token = s;
-        s++;
-        SKIP_DELIM_EX(s, '>', '<', 0,
-                      "closing angle bracket not found after position %d",
-                      token - str);
+        // found quoted value
+        token = str;
+        str++;
+        // search closing quotation
+        while (*str != '"') {
+            if (!*str) {
+                return decode_error(L, op, EILSEQ,
+                                    "closing quotation not found");
+            } else if (*str == '\\') {
+                // skip escaped character
+                str++;
+            }
+            str++;
+        }
+        str++;
+        token_len = str - token;
         break;
 
     default:
-        token = s;
-        s++;
-        while (*s) {
-            if (*s == ',' || *s == '}' || *s == ' ') {
-                break;
-            } else if (*s == '\\') {
-                if (s[1]) {
-                    s++;
-                }
+        // found unquoted value
+        token = str;
+        while (*str != ' ' && *str != ',' && *str != '}') {
+            if (!*str) {
+                return decode_error(L, op, EILSEQ, "malformed array string");
             }
-            s++;
+            str++;
         }
-        if (!*s) {
-            return decode_error(L, op, EILSEQ, "malformed array string");
+        token_len = str - token;
+        // check for NULL
+        if (token_len == 4 && strncasecmp(token, "NULL", token_len) == 0) {
+            arrlen[depth]++;
+            lua_pushnil(L);
+            lua_rawseti(L, -2, arrlen[depth]);
+            goto CHECK_DELIMITER;
         }
+        break;
     }
 
     // call function
-    retval = cbfn(ctx, L, op, token, s - token);
+    retval = decode_array_item(L, token, token_len);
     switch (retval) {
     default:
         // function returns multiple values
@@ -169,38 +167,16 @@ CHECK_ITEM:
         arrlen[depth]++;
         lua_rawseti(L, -2, arrlen[depth]);
     }
+    str = decode_skip_space(str);
 
-    s = decode_skip_space(s);
-    if (*s == ',') {
-        SKIP_DELIM(s, ',', NULL);
-    } else if (*s != '}') {
-        return decode_error_at(L, op, EILSEQ, str, s);
+CHECK_DELIMITER:
+    // next delimiter must be ',' or '}'
+    if (*str == ',') {
+        str = decode_skip_space(str + 1);
+    } else if (*str != '}') {
+        return decode_error_at(L, op, EILSEQ, src, str);
     }
-    goto CHECK_TOKEN;
-}
-
-static int decode_array_item(void *ctx, lua_State *L, const char *op,
-                             const char *token, size_t len)
-{
-    int top = lua_gettop(L);
-    (void)ctx;
-    (void)op;
-    // call function
-    lua_pushvalue(L, 2);
-    lua_pushlstring(L, token, len);
-    lua_call(L, 1, LUA_MULTRET);
-    return lua_gettop(L) - top;
-}
-
-static int decode_array_lua(lua_State *L)
-{
-    size_t len      = 0;
-    const char *str = lauxh_checklstring(L, 1, &len);
-
-    luaL_checktype(L, 2, LUA_TFUNCTION);
-    lua_settop(L, 2);
-    return decode_array(L, "postgres.decode.array", str, len, decode_array_item,
-                        NULL);
+    goto NEXT_ELEMENT;
 }
 
 LUALIB_API int luaopen_postgres_decode_array(lua_State *L)

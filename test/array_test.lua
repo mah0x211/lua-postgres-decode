@@ -4,12 +4,13 @@ local decode_array = require('postgres.decode.array')
 function testcase.array()
     -- test that array value
     local v, err = decode_array(
-                       '{ foo, { (bar), { [baz] }, baa }, <qux>, "quux", hello\\ world! }',
+                       [[{ foo, NULL, { (bar), { [baz] }, baa }, <qux>, "quux", "hello\ world!" }]],
                        function(elmstr)
             return elmstr
         end)
     assert.equal(v, {
         'foo',
+        nil,
         {
             '(bar)',
             {
@@ -19,7 +20,7 @@ function testcase.array()
         },
         '<qux>',
         '"quux"',
-        'hello\\ world!',
+        '"hello\\ world!"',
     })
     assert.is_nil(err)
 
@@ -43,23 +44,64 @@ function testcase.array()
     end)
     assert.is_nil(v)
     assert.match(err, 'world!')
+end
 
+function testcase.empty_string_error()
     -- test that empty string error
-    v, err = decode_array('', function(elmstr)
+    local v, err = decode_array('', function(elmstr)
         return elmstr
     end)
     assert.is_nil(v)
     assert.match(err, 'empty string')
 
+end
+
+function testcase.nesting_level_error()
+    -- test that nesting level too deep error
+    local v, err = decode_array(string.rep('{', 65), function(elmstr)
+        return elmstr
+    end)
+    assert.is_nil(v)
+    assert.match(err, 'nesting level .+ too deep', false)
+end
+
+function testcase.no_opening_bracket_error()
     -- test that opening bracket error
-    v, err = decode_array('foo, bar, baz }', function(elmstr)
+    local v, err = decode_array('foo, bar, baz }', function(elmstr)
         return elmstr
     end)
     assert.is_nil(v)
     assert.match(err, 'opening curly bracket')
+end
 
+function testcase.empty_element_error()
+    -- test that empty elements are not allowed error
+    local v, err = decode_array('{ ,}', function(elmstr)
+        return elmstr
+    end)
+    assert.is_nil(v)
+    assert.match(err, 'empty element')
+end
+
+function testcase.closing_quotation_error()
+    -- test that quoted string error
+    local v, err = decode_array('{ "foo', function(elmstr)
+        return elmstr
+    end)
+    assert.is_nil(v)
+    assert.match(err, 'closing quotation not found')
+end
+
+function testcase.malformed_array_error()
     -- test that malformed array error
-    v, err = decode_array('{ ', function(elmstr)
+    local v, err = decode_array('{ ', function(elmstr)
+        return elmstr
+    end)
+    assert.is_nil(v)
+    assert.match(err, 'malformed array string')
+
+    -- test that unquoted string error
+    v, err = decode_array('{ foo', function(elmstr)
         return elmstr
     end)
     assert.is_nil(v)
@@ -71,18 +113,27 @@ function testcase.array()
     end)
     assert.is_nil(v)
     assert.match(err, 'malformed array string')
+end
 
-    -- test that nesting level too deep error
-    v, err = decode_array(string.rep('{', 65), function(elmstr)
+function testcase.illegal_character_error()
+    -- test that illegal character after closing bracket error
+    local v, err = decode_array('{ } }', function(elmstr)
         return elmstr
     end)
     assert.is_nil(v)
-    assert.match(err, 'nesting level .+ too deep', false)
+    assert.match(err, "'}' at position 5")
+
+    -- test that illegal character after element error
+    v, err = decode_array('{ foo | }', function(elmstr)
+        return elmstr
+    end)
+    assert.is_nil(v)
+    assert.match(err, "'|' at position 7")
 
     -- test that illegal character error
     v, err = decode_array('{} }', function(elmstr)
         return elmstr
     end)
     assert.is_nil(v)
-    assert.match(err, "'}' found at")
+    assert.match(err, "'}' at position 4")
 end
