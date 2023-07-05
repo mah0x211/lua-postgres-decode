@@ -167,10 +167,10 @@ NEXT_ELEMENT:
         arrlen[depth]++;
         lua_rawseti(L, -2, arrlen[depth]);
     }
-    str = decode_skip_space(str);
 
 CHECK_DELIMITER:
     // next delimiter must be ',' or '}'
+    str = decode_skip_space(str);
     if (*str == ',') {
         str = decode_skip_space(str + 1);
     } else if (*str != '}') {

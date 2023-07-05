@@ -8,6 +8,7 @@ function testcase.array()
                        function(elmstr)
             return elmstr
         end)
+    assert.is_nil(err)
     assert.equal(v, {
         'foo',
         nil,
@@ -22,7 +23,16 @@ function testcase.array()
         '"quux"',
         '"hello\\ world!"',
     })
+
+    -- test that NULL elements
+    v, err = decode_array('{ foo, bar, NULL }', function(elmstr)
+        return elmstr
+    end)
     assert.is_nil(err)
+    assert.equal(v, {
+        'foo',
+        'bar',
+    })
 
     -- test that can ignore elements
     v, err = decode_array('{ foo, (bar), baz }', function(elmstr)
