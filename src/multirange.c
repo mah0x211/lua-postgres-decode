@@ -51,7 +51,6 @@ NEXT_RANGE:
     }
     lua_rawseti(L, -2, ++nrange);
 
-NEXT_CHAR:
     // find delimiter or closing parenthesis
     switch (*str) {
     case 0:
@@ -63,10 +62,6 @@ NEXT_CHAR:
         // found delimiter
         str++;
         goto NEXT_RANGE;
-
-    case ' ':
-        // skip spaces
-        goto NEXT_CHAR;
 
     case '}':
         // found closing parenthesis
