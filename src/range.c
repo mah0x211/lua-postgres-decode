@@ -29,7 +29,10 @@ static int decode_range_lua(lua_State *L)
     const char *src       = lauxh_checklstring(L, 1, &len);
 
     luaL_checktype(L, 2, LUA_TFUNCTION);
-    lua_settop(L, 2);
+    if (lua_gettop(L) < 3) {
+        lua_pushnil(L);
+    }
+    lua_settop(L, 3);
 
     DECODE_START(L, op, src, len);
     src = decode_range(L, op, (char *)src, NULL);

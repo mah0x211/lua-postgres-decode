@@ -34,14 +34,14 @@
 
 #define SKIP_DELIM(s, delim, ...) SKIP_DELIM_EX(s, delim, 0, 1, __VA_ARGS__)
 
-static int decode_array_item(lua_State *L, const char *token, size_t len)
+static void decode_array_item(lua_State *L, const char *token, size_t len)
 {
-    int top = lua_gettop(L);
     // call function
-    lua_pushvalue(L, 2);
+    lua_pushvalue(L, 2); // passed function
     lua_pushlstring(L, token, len);
-    lua_call(L, 1, LUA_MULTRET);
-    return lua_gettop(L) - top;
+    lua_pushboolean(L, *token == '"');
+    lua_pushvalue(L, 3); // passed arg
+    lua_call(L, 3, 2);
 }
 
 static int decode_array_lua(lua_State *L)
@@ -54,10 +54,12 @@ static int decode_array_lua(lua_State *L)
     int arrlen[MAX_ARRAY_DEPTH + 1] = {0};
     const char *token               = NULL;
     size_t token_len                = 0;
-    int retval                      = 0;
 
     luaL_checktype(L, 2, LUA_TFUNCTION);
-    lua_settop(L, 2);
+    if (lua_gettop(L) < 3) {
+        lua_pushnil(L);
+    }
+    lua_settop(L, 3);
     lua_newtable(L);
 
     // skip spaces
@@ -110,7 +112,7 @@ NEXT_ELEMENT:
         if (*str) {
             return decode_error_at(L, op, EILSEQ, src, str);
         }
-        lua_settop(L, 3);
+        lua_settop(L, 4);
         return 1;
 
     case '"':
@@ -153,20 +155,14 @@ NEXT_ELEMENT:
     }
 
     // call function
-    retval = decode_array_item(L, token, token_len);
-    switch (retval) {
-    default:
-        // function returns multiple values
-        // remove 3rd and subsequent values
-        lua_pop(L, retval - 2);
+    decode_array_item(L, token, token_len);
+    // check for error
+    if (!lua_isnil(L, -1)) {
         return decode_error(L, op, EILSEQ, lua_tostring(L, -1));
-
-    case 0:
-        lua_pushnil(L);
-    case 1:
-        arrlen[depth]++;
-        lua_rawseti(L, -2, arrlen[depth]);
     }
+    lua_pop(L, 1);
+    arrlen[depth]++;
+    lua_rawseti(L, -2, arrlen[depth]);
 
 CHECK_DELIMITER:
     // next delimiter must be ',' or '}'

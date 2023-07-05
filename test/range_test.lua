@@ -3,13 +3,18 @@ local decode_range = require('postgres.decode.range')
 
 function testcase.range()
     -- test that decode range value that both lower and upper are inclusive
-    local rval, err = decode_range('[123, 456] ', function(elmstr)
+    local rval, err = decode_range('[123, "456"] ',
+                                   function(elmstr, is_quoted, ctx)
+        assert.equal(ctx, 'context')
+        if string.sub(elmstr, 1, 1) == '"' then
+            assert.is_true(is_quoted)
+        end
         return elmstr
-    end)
+    end, 'context')
     assert.is_nil(err)
     assert.equal(rval, {
         '123',
-        '456',
+        '"456"',
         lower_inc = true,
         upper_inc = true,
     })

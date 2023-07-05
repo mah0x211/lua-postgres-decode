@@ -31,7 +31,10 @@ static int decode_multirange_lua(lua_State *L)
     int nrange            = 0;
 
     luaL_checktype(L, 2, LUA_TFUNCTION);
-    lua_settop(L, 2);
+    if (lua_gettop(L) < 3) {
+        lua_pushnil(L);
+    }
+    lua_settop(L, 3);
     lua_newtable(L);
 
     DECODE_START(L, op, str, len);
