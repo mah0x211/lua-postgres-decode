@@ -60,6 +60,30 @@ function testcase.array()
     assert.match(err, 'world!')
 end
 
+function testcase.custom_delimiter()
+    -- test that use custom delimiter
+    local v, err = decode_array('{foo; bar; baz}', function(elmstr)
+        return elmstr
+    end, nil, ';')
+    assert.is_nil(err)
+    assert.equal(v, {
+        'foo',
+        'bar',
+        'baz',
+    })
+
+    -- test that use default delimiter if delimiter argument is nil
+    v, err = decode_array('{foo, bar, baz}', function(elmstr)
+        return elmstr
+    end, nil, nil)
+    assert.is_nil(err)
+    assert.equal(v, {
+        'foo',
+        'bar',
+        'baz',
+    })
+end
+
 function testcase.empty_string_error()
     -- test that empty string error
     local v, err = decode_array('', function(elmstr)
@@ -67,7 +91,6 @@ function testcase.empty_string_error()
     end)
     assert.is_nil(v)
     assert.match(err, 'empty string')
-
 end
 
 function testcase.nesting_level_error()

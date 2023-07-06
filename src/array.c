@@ -50,6 +50,7 @@ static int decode_array_lua(lua_State *L)
     size_t len                      = 0;
     char *src                       = (char *)lauxh_checklstring(L, 1, &len);
     char *str                       = src;
+    char delim                      = ',';
     int depth                       = 0;
     int arrlen[MAX_ARRAY_DEPTH + 1] = {0};
     const char *token               = NULL;
@@ -58,7 +59,15 @@ static int decode_array_lua(lua_State *L)
     luaL_checktype(L, 2, LUA_TFUNCTION);
     if (lua_gettop(L) < 3) {
         lua_pushnil(L);
+    } else if (lua_gettop(L) > 3) {
+        size_t delim_len = 1;
+        char *delim_str  = (char *)lauxh_optlstring(L, 4, ",", &delim_len);
+        if (delim_len != 1) {
+            return decode_error(L, op, EINVAL, "delimiter must be a character");
+        }
+        delim = *delim_str;
     }
+
     lua_settop(L, 3);
     lua_newtable(L);
 
@@ -77,10 +86,6 @@ NEXT_ELEMENT:
     switch (*str) {
     case 0:
         return decode_error(L, op, EILSEQ, "malformed array string");
-
-    case ',':
-        // empty elements are not allowed
-        return decode_error(L, op, EILSEQ, "empty elements are not allowed");
 
     case '{':
         // found nested array
@@ -102,7 +107,7 @@ NEXT_ELEMENT:
             // end of nested array
             arrlen[depth]++;
             lua_rawseti(L, -2, arrlen[depth]);
-            if (*str == ',') {
+            if (*str == delim) {
                 // skip comma
                 str = decode_skip_space(str + 1);
             }
@@ -135,9 +140,15 @@ NEXT_ELEMENT:
         break;
 
     default:
+        if (*str == delim) {
+            // empty elements are not allowed
+            return decode_error(L, op, EILSEQ,
+                                "empty elements are not allowed");
+        }
+
         // found unquoted value
         token = str;
-        while (*str != ' ' && *str != ',' && *str != '}') {
+        while (*str != ' ' && *str != delim && *str != '}') {
             if (!*str) {
                 return decode_error(L, op, EILSEQ, "malformed array string");
             }
@@ -165,9 +176,9 @@ NEXT_ELEMENT:
     lua_rawseti(L, -2, arrlen[depth]);
 
 CHECK_DELIMITER:
-    // next delimiter must be ',' or '}'
+    // next delimiter must be delim or '}'
     str = decode_skip_space(str);
-    if (*str == ',') {
+    if (*str == delim) {
         str = decode_skip_space(str + 1);
     } else if (*str != '}') {
         return decode_error_at(L, op, EILSEQ, src, str);
