@@ -311,7 +311,7 @@ print(dump(bit))
 ```
 
 
-## v, err = decode.array( str, fn [, ctx] )
+## v, err = decode.array( str, fn [, ctx [, delim]] )
 
 decode array string to array of values.
 
@@ -334,6 +334,7 @@ see also: https://www.postgresql.org/docs/current/arrays.html
     end
     ```
 - `ctx:any`: context object that passed to `fn`.
+- `delim:string`: delimiter string. (default: `,`)
 
 **Returns**
 
