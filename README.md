@@ -311,7 +311,7 @@ print(dump(bit))
 ```
 
 
-## v, err = decode.array( str, fn )
+## v, err = decode.array( str, fn [, ctx] )
 
 decode array string to array of values.
 
@@ -324,13 +324,16 @@ see also: https://www.postgresql.org/docs/current/arrays.html
     ```lua
     --- decodefn decode array element string to value. 
     --- @param elmstr string
+    --- @param is_quoted boolean
+    --- @param ctx any
     --- @return v any
     --- @return err any
-    function decodefn( elmstr )
+    function decodefn( elmstr, is_quoted, ctx )
         -- if decodefn returns nil, err, stop decoding and return nil and err.
         return v, 'error from decodefn'
     end
     ```
+- `ctx:any`: context object that passed to `fn`.
 
 **Returns**
 
@@ -422,7 +425,7 @@ print(dump(tsv))
 ```
 
 
-## v, err = decode.range( rangestr, fn )
+## v, err = decode.range( rangestr, fn [, ctx] )
 
 decode range string to array of values.
 
@@ -435,13 +438,16 @@ see also: https://www.postgresql.org/docs/current/rangetypes.html
     ```lua
     --- decodefn decode range element string to value. 
     --- @param elmstr string
+    --- @param is_quoted boolean
+    --- @param ctx any
     --- @return v any
     --- @return err any
-    function decodefn( elmstr )
+    function decodefn( elmstr, is_quoted, ctx )
         -- if decodefn returns nil, err, stop decoding and return nil and err.
         return v, 'error from decodefn'
     end
     ```
+- `ctx:any`: context object that passed to `fn`.
 
 **Returns**
 
@@ -466,7 +472,7 @@ print(dump(range))
 ```
 
 
-## v, err = decode.multirange( multirangestr, fn )
+## v, err = decode.multirange( multirangestr, fn [, ctx] )
 
 decode multirange string to array of range values.
 
@@ -479,13 +485,16 @@ see also: https://www.postgresql.org/docs/current/rangetypes.html
     ```lua
     --- decodefn decode range element string to value. 
     --- @param elmstr string
+    --- @param is_quoted boolean
+    --- @param ctx any
     --- @return v any
     --- @return err any
-    function decodefn( elmstr )
+    function decodefn( elmstr, is_quoted, ctx )
         -- if decodefn returns nil, err, stop decoding and return nil and err.
         return v, 'error from decodefn'
     end
     ```
+- `ctx:any`: context object that passed to `fn`.
 
 **Returns**
 

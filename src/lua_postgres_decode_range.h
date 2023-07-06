@@ -35,16 +35,16 @@
  * @param L
  * @param token
  * @param len
- * @return int
  */
-static inline int decode_range_item(lua_State *L, const char *token, size_t len)
+static inline void decode_range_item(lua_State *L, const char *token,
+                                     size_t len)
 {
-    int top = lua_gettop(L);
     // call function
-    lua_pushvalue(L, 2);
+    lua_pushvalue(L, 2); // passed function
     lua_pushlstring(L, token, len);
-    lua_call(L, 1, LUA_MULTRET);
-    return lua_gettop(L) - top;
+    lua_pushboolean(L, *token == '"');
+    lua_pushvalue(L, 3); // passed arg
+    lua_call(L, 3, 2);
 }
 
 /**
@@ -67,7 +67,6 @@ static char *decode_range(lua_State *L, const char *op, char *src, char *pos)
     int ntoken       = 0;
     int lower_inc    = 0;
     int upper_inc    = 0;
-    int retval       = 0;
 
     lua_newtable(L);
     // skip spaces
@@ -140,23 +139,21 @@ NEXT_CHAR:
     token_len = str - token;
     ntoken++;
     if (token_len) {
-        retval = decode_range_item(L, token, token_len);
-        switch (retval) {
-        default:
+        decode_range_item(L, token, token_len);
+        if (!lua_isnil(L, -1)) {
             // function returns multiple values
             decode_error(L, op, EILSEQ, lua_tostring(L, -1));
             return NULL;
-
-        case 0:
-            lua_pushnil(L);
+        }
+        lua_pop(L, 1);
+        if (lua_isnil(L, -1)) {
             if (ntoken == 1) {
                 lower_inc = 0;
             } else {
                 upper_inc = 0;
             }
-        case 1:
-            lua_rawseti(L, -2, ntoken);
         }
+        lua_rawseti(L, -2, ntoken);
     } else if (ntoken == 1) {
         lower_inc = 0;
     } else {

@@ -4,10 +4,14 @@ local decode_multirange = require('postgres.decode.multirange')
 function testcase.multirange()
     -- test that decode multirange value
     local rval, err = decode_multirange(
-                          '{[123, 456],  (123, 456] ,  [123, 456), (123, 456) }',
-                          function(elmstr)
+                          '{[123, 456],  (123, "456"] ,  [123, 456), (123, 456) }',
+                          function(elmstr, is_quoted, ctx)
+            assert.equal(ctx, 'context')
+            if string.sub(elmstr, 1, 1) == '"' then
+                assert.is_true(is_quoted)
+            end
             return elmstr
-        end)
+        end, 'context')
     assert.is_nil(err)
     assert.equal(rval, {
         {
@@ -18,7 +22,7 @@ function testcase.multirange()
         },
         {
             '123',
-            '456',
+            '"456"',
             upper_inc = true,
         },
         {

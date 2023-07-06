@@ -5,9 +5,13 @@ function testcase.array()
     -- test that array value
     local v, err = decode_array(
                        [[{ foo, NULL, { (bar), { [baz] }, baa }, <qux>, "quux", "hello\ world!" }]],
-                       function(elmstr)
+                       function(elmstr, is_quoted, ctx)
+            assert.equal(ctx, 'context')
+            if string.sub(elmstr, 1, 1) == '"' then
+                assert.is_true(is_quoted)
+            end
             return elmstr
-        end)
+        end, 'context')
     assert.is_nil(err)
     assert.equal(v, {
         'foo',
