@@ -82,6 +82,13 @@ function testcase.custom_delimiter()
         'bar',
         'baz',
     })
+
+    -- test that argument error
+    v, err = decode_array('{foo, bar, baz}', function(elmstr)
+        return elmstr
+    end, nil, ",,")
+    assert.is_nil(v)
+    assert.match(err, 'delimiter must be a single character')
 end
 
 function testcase.empty_string_error()

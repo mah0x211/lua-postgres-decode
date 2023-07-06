@@ -24,16 +24,6 @@
 
 #define MAX_ARRAY_DEPTH 64
 
-#define SKIP_DELIM_EX(s, delim, open_delim, skip_space, ...)                   \
-    do {                                                                       \
-        (s) = decode_skip_delim((s), (delim), (open_delim), skip_space);       \
-        if (!(s)) {                                                            \
-            return decode_error((L), (op), EILSEQ, __VA_ARGS__);               \
-        }                                                                      \
-    } while (0)
-
-#define SKIP_DELIM(s, delim, ...) SKIP_DELIM_EX(s, delim, 0, 1, __VA_ARGS__)
-
 static void decode_array_item(lua_State *L, const char *token, size_t len)
 {
     // call function
@@ -60,10 +50,11 @@ static int decode_array_lua(lua_State *L)
     if (lua_gettop(L) < 3) {
         lua_pushnil(L);
     } else if (lua_gettop(L) > 3) {
-        size_t delim_len = 1;
+        size_t delim_len = 0;
         char *delim_str  = (char *)lauxh_optlstring(L, 4, ",", &delim_len);
         if (delim_len != 1) {
-            return decode_error(L, op, EINVAL, "delimiter must be a character");
+            return decode_error(L, op, EINVAL,
+                                "delimiter must be a single character");
         }
         delim = *delim_str;
     }
