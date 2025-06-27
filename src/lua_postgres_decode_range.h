@@ -94,6 +94,10 @@ static char *decode_range(lua_State *L, const char *op, char *src, char *pos)
 
     // find delimiter or closing parenthesis
 NEXT_CHAR:
+    if (!str) {
+        str = "";
+    }
+
     switch (*str) {
     case 0:
         decode_error(L, op, EILSEQ, "malformed range string");
