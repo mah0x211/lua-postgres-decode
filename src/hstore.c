@@ -27,7 +27,7 @@
 
 static int decode_hstore_lua(lua_State *L)
 {
-    static const char *op = "postgres.decode.polygon";
+    static const char *op = "postgres.decode.hstore";
     size_t len            = 0;
     char *str             = (char *)lauxh_checklstring(L, 1, &len);
     char *chunk           = NULL;
