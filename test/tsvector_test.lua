@@ -1,4 +1,5 @@
 local testcase = require('testcase')
+local assert = require('assert')
 local decode_tsvector = require('postgres.decode.tsvector')
 
 function testcase.tsvector()

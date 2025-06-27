@@ -1,4 +1,5 @@
 local testcase = require('testcase')
+local assert = require('assert')
 local decode_path = require('postgres.decode.path')
 
 function testcase.path()

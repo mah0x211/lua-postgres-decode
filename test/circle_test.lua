@@ -1,4 +1,5 @@
 local testcase = require('testcase')
+local assert = require('assert')
 local decode_circle = require('postgres.decode.circle')
 
 function testcase.circle()
