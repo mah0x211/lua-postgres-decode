@@ -1,4 +1,5 @@
 local testcase = require('testcase')
+local assert = require('assert')
 local decode_array = require('postgres.decode.array')
 
 function testcase.array()

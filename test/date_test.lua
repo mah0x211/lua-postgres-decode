@@ -1,4 +1,5 @@
 local testcase = require('testcase')
+local assert = require('assert')
 local errno = require('errno')
 local decode_date = require('postgres.decode.date')
 

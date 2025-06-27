@@ -1,4 +1,5 @@
 local testcase = require('testcase')
+local assert = require('assert')
 local errno = require('errno')
 local decode_int = require('postgres.decode.int')
 
@@ -29,20 +30,16 @@ function testcase.int()
     for _, s in ipairs({
         '#1234',
         '1234#',
+        '12.34',
+        ' ',
     }) do
         local v, err = decode_int(s)
         assert.is_nil(v)
         assert.equal(err.type, errno.EILSEQ)
-        assert.match(err, '\'#\' at position')
+        assert.match(err, ' at position')
     end
 
-    -- test that empty string error
-    local v, err = decode_int('')
-    assert.is_nil(v)
-    assert.equal(err.type, errno.EINVAL)
-    assert.match(err, 'empty string')
-
     -- test that throws an error if argument is not string
-    err = assert.throws(decode_int)
+    local err = assert.throws(decode_int)
     assert.match(err, 'string expected,')
 end

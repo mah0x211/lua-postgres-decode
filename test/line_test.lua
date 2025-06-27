@@ -1,4 +1,5 @@
 local testcase = require('testcase')
+local assert = require('assert')
 local decode_line = require('postgres.decode.line')
 
 function testcase.line()
