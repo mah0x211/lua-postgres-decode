@@ -23,13 +23,18 @@
 #ifndef lua_postgres_decode_h
 #define lua_postgres_decode_h
 
+// depend
+#include "lauxhlib.h"
+#include "lua_errno.h"
+// lua
+#include <lua.h>
+// system
 #include <ctype.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
-// lua
-#include <lauxhlib.h>
-#include <lua_errno.h>
 
 static inline int decode_error(lua_State *L, const char *op, int errnum,
                                const char *fmt, ...)
